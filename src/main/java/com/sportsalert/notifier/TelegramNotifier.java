@@ -147,14 +147,14 @@ public class TelegramNotifier {
     }
 
     private String sportEmoji(String sport) {
-        return switch (sport) {
-            case "Soccer"     -> "⚽";
-            case "Basketball" -> "🏀";
-            case "Baseball"   -> "⚾";
-            case "Fighting"   -> "🥊";
-            case "Tennis"     -> "🎾";
-            case "LoL"        -> "🎮";
-            default           -> "🏅";
-        };
+        switch (sport) {
+            case "Soccer":     return "⚽";
+            case "Basketball": return "🏀";
+            case "Baseball":   return "⚾";
+            case "Fighting":   return "🥊";
+            case "Tennis":     return "🎾";
+            case "LoL":        return "🎮";
+            default:           return "🏅";
+        }
     }
 }
