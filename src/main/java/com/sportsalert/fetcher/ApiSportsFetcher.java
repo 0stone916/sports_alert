@@ -26,7 +26,6 @@ public class ApiSportsFetcher {
         matches.addAll(fetchSoccer(date));
         matches.addAll(fetchBasketball(date));
         matches.addAll(fetchBaseball(date));
-        matches.addAll(fetchMMA(date));
         return matches;
     }
 
@@ -99,41 +98,6 @@ public class ApiSportsFetcher {
             return matches;
         } catch (Exception e) {
             System.err.println("[API-Sports] Baseball fetch failed: " + e.getMessage());
-            return new ArrayList<>();
-        }
-    }
-
-    private List<Match> fetchMMA(LocalDate date) {
-        try {
-            Thread.sleep(300);
-            JSONArray response = request("https://v1.mma.api-sports.io/fights?date=" + date);
-            List<Match> matches = new ArrayList<>();
-            for (int i = 0; i < response.length(); i++) {
-                JSONObject item = response.getJSONObject(i);
-                String home = "", away = "";
-                if (item.has("fighters")) {
-                    JSONObject fighters = item.getJSONObject("fighters");
-                    JSONObject h = fighters.optJSONObject("home");
-                    JSONObject a = fighters.optJSONObject("away");
-                    home = h != null ? h.optString("name", "") : "";
-                    away = a != null ? a.optString("name", "") : "";
-                } else {
-                    JSONObject h = item.optJSONObject("home");
-                    JSONObject a = item.optJSONObject("away");
-                    home = h != null ? h.optString("name", "") : "";
-                    away = a != null ? a.optString("name", "") : "";
-                }
-                if (home.isEmpty() && away.isEmpty()) continue;
-                JSONObject league = item.optJSONObject("league");
-                String leagueName = league != null ? league.optString("name", "MMA") : "MMA";
-                matches.add(new Match("Fighting", leagueName,
-                        home, away, date.toString(),
-                        toKST(item.optString("date", "")),
-                        item.optString("round", "")));
-            }
-            return matches;
-        } catch (Exception e) {
-            System.err.println("[API-Sports] MMA fetch failed: " + e.getMessage());
             return new ArrayList<>();
         }
     }
