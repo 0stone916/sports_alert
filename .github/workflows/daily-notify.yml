@@ -1,0 +1,27 @@
+name: Daily Sports Alert
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # 매일 오전 9시 KST (= UTC 00:00)
+  workflow_dispatch:       # GitHub UI에서 수동 실행 가능
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build
+        run: mvn package -q -DskipTests
+
+      - name: Run alert
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+        run: java -jar target/sports-alert-1.0.0.jar
