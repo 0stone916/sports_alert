@@ -1,5 +1,6 @@
 package com.sportsalert;
 
+import com.sportsalert.fetcher.ApiSportsFetcher;
 import com.sportsalert.fetcher.LoLEsportsFetcher;
 import com.sportsalert.fetcher.SportsDBFetcher;
 import com.sportsalert.filter.HypeFilter;
@@ -28,6 +29,7 @@ public class Main {
         System.out.println("[Daily] Checking matches for: " + tomorrow);
 
         List<Match> allMatches = new ArrayList<>();
+        allMatches.addAll(new ApiSportsFetcher().fetchMatches(tomorrow));
         allMatches.addAll(new SportsDBFetcher().fetchMatches(tomorrow));
         allMatches.addAll(new LoLEsportsFetcher().fetchMatches(tomorrow));
         System.out.println("Total fetched: " + allMatches.size());
@@ -53,6 +55,7 @@ public class Main {
         LocalDate end = today.plusDays(6);
         System.out.println("[Weekly] Checking matches from " + today + " to " + end);
 
+        ApiSportsFetcher apiSportsFetcher = new ApiSportsFetcher();
         SportsDBFetcher sportsDBFetcher = new SportsDBFetcher();
         LoLEsportsFetcher lolFetcher = new LoLEsportsFetcher();
         HypeFilter filter = new HypeFilter();
@@ -61,6 +64,7 @@ public class Main {
         for (int i = 0; i <= 6; i++) {
             LocalDate date = today.plusDays(i);
             List<Match> all = new ArrayList<>();
+            all.addAll(apiSportsFetcher.fetchMatches(date));
             all.addAll(sportsDBFetcher.fetchMatches(date));
             all.addAll(lolFetcher.fetchMatches(date));
             List<Match> hyped = filter.filter(all);

@@ -24,4 +24,5 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
         run: java -jar target/sports-alert-1.0.0.jar

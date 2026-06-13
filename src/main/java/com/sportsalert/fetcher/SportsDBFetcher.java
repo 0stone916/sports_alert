@@ -15,7 +15,7 @@ import java.util.List;
 public class SportsDBFetcher {
 
     private static final String BASE_URL = "https://www.thesportsdb.com/api/v1/json/3/eventsday.php";
-    private static final String[] SPORTS = {"Soccer", "Basketball", "Baseball", "Fighting", "Tennis"};
+    private static final String[] SPORTS = {"Fighting", "Tennis"};
     private final HttpClient client = HttpClient.newHttpClient();
 
     public List<Match> fetchMatches(LocalDate date) {
@@ -47,14 +47,18 @@ public class SportsDBFetcher {
         JSONArray events = json.getJSONArray("events");
         for (int i = 0; i < events.length(); i++) {
             JSONObject e = events.getJSONObject(i);
+            String homeTeam = e.optString("strHomeTeam", "");
+            String awayTeam = e.optString("strAwayTeam", "");
+            if (homeTeam.isEmpty() && awayTeam.isEmpty()) continue;
+
             String round = e.optString("strRound", "");
-            if (round.isEmpty()) round = String.valueOf(e.optInt("intRound", 0));
+            if (round.isEmpty() || round.matches("\\d+")) round = "";
 
             matches.add(new Match(
                     sport,
                     e.optString("strLeague", ""),
-                    e.optString("strHomeTeam", ""),
-                    e.optString("strAwayTeam", ""),
+                    homeTeam,
+                    awayTeam,
                     e.optString("dateEvent", ""),
                     e.optString("strTime", ""),
                     round
