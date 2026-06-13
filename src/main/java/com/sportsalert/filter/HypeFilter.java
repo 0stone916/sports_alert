@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 
 public class HypeFilter {
 
-    // These leagues include all matches (knockout-only or always notable)
     private static final Set<String> ALWAYS_INCLUDE_LEAGUES = Set.of(
             "uefa champions league", "uefa europa league", "uefa europa conference league",
             "fa cup", "efl cup",
@@ -32,8 +31,7 @@ public class HypeFilter {
             "k league 1", "k league",
             "la liga", "bundesliga", "serie a", "ligue 1",
             "nba", "kbl",
-            "mlb", "kbo",
-            "lck", "lec", "lcs", "lck challengers"
+            "mlb", "kbo"
     );
 
     private static final List<String> PLAYOFF_KEYWORDS = List.of(
@@ -54,8 +52,17 @@ public class HypeFilter {
     private boolean isHype(Match match) {
         String league = match.getLeague().toLowerCase();
         String round = match.getRound().toLowerCase();
+        String home = match.getHomeTeam().toLowerCase();
+        String away = match.getAwayTeam().toLowerCase();
 
         if (ALWAYS_INCLUDE_LEAGUES.stream().anyMatch(league::contains)) return true;
+
+        // LCK: T1 경기 전부 + 플레이오프
+        if (league.contains("lck")) {
+            boolean isT1Match = home.contains("t1") || away.contains("t1");
+            boolean isPlayoff = PLAYOFF_KEYWORDS.stream().anyMatch(kw -> round.contains(kw) || league.contains(kw));
+            return isT1Match || isPlayoff;
+        }
 
         if ("Fighting".equalsIgnoreCase(match.getSport()) &&
             BOXING_TITLE_KEYWORDS.stream().anyMatch(kw -> league.contains(kw) || round.contains(kw))) return true;
