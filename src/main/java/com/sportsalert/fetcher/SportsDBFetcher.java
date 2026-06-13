@@ -15,7 +15,7 @@ import java.util.List;
 public class SportsDBFetcher {
 
     private static final String BASE_URL = "https://www.thesportsdb.com/api/v1/json/3/eventsday.php";
-    private static final String[] SPORTS = {"Fighting", "Tennis"};
+    private static final String[] SPORTS = {"Fighting"};
     private final HttpClient client = HttpClient.newHttpClient();
 
     public List<Match> fetchMatches(LocalDate date) {

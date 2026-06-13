@@ -8,39 +8,44 @@ import java.util.stream.Collectors;
 
 public class HypeFilter {
 
-    private static final Set<String> ALWAYS_INCLUDE_LEAGUES = Set.of(
-            "uefa champions league", "uefa europa league", "uefa europa conference league",
-            "fa cup", "efl cup",
-            "fifa world cup", "uefa european championship",
-            "copa del rey", "dfb-pokal", "coppa italia",
-            "ufc",
-            "wimbledon", "us open", "french open", "australian open",
-            "lol worlds", "worlds", "mid-season invitational", "msi"
+    private static final Set<String> FINAL_KEYWORDS = Set.of(
+            "final", "semi-final", "semifinal", "semi final",
+            "결승", "준결승"
     );
 
-    // Boxing title fight keywords — sport=="Fighting", non-UFC
+    // 월드컵 32강부터 전경기
+    private static final Set<String> WORLD_CUP_KNOCKOUT_KEYWORDS = Set.of(
+            "round of 32", "32강",
+            "round of 16", "16강",
+            "quarter", "8강",
+            "semi", "4강",
+            "final", "결승", "준결승", "3rd place", "third place"
+    );
+
+    private static final Set<String> NBA_PLAYOFF_KEYWORDS = Set.of(
+            "conference semi", "conference final", "nba final",
+            "final", "semi-final", "semifinal",
+            "결승", "준결승"
+    );
+
+    private static final Set<String> UFC_TITLE_KEYWORDS = Set.of(
+            "title", "championship", "belt",
+            "타이틀", "챔피언십"
+    );
+
     private static final Set<String> BOXING_TITLE_KEYWORDS = Set.of(
             "wbc", "wba", "ibf", "wbo", "ibo",
-            "title fight", "world title", "world championship", "championship fight",
+            "title fight", "world title", "world championship",
             "타이틀", "세계 챔피언", "챔피언전"
     );
 
-    // Season leagues — only playoff/final rounds included
-    private static final Set<String> BIG_SEASON_LEAGUES = Set.of(
-            "english premier league", "premier league",
-            "k league 1", "k league",
-            "la liga", "bundesliga", "serie a", "ligue 1",
-            "nba", "kbl",
-            "mlb", "kbo"
+    private static final Set<String> LOL_WORLDS_KEYWORDS = Set.of(
+            "lol worlds", "worlds", "mid-season invitational", "msi"
     );
 
-    private static final List<String> PLAYOFF_KEYWORDS = List.of(
-            "final", "semi-final", "semifinal", "semi final",
-            "quarter-final", "quarterfinal", "quarter final",
-            "round of 16", "round of 8", "round of 4",
-            "playoff", "play-off", "post-season", "postseason",
-            "knockout", "elimination", "championship",
-            "결승", "준결승", "8강", "16강", "4강", "플레이오프", "챔피언십"
+    private static final Set<String> LOL_PLAYOFF_KEYWORDS = Set.of(
+            "final", "semi-final", "semifinal", "playoff",
+            "결승", "준결승", "플레이오프"
     );
 
     public List<Match> filter(List<Match> matches) {
@@ -50,26 +55,60 @@ public class HypeFilter {
     }
 
     private boolean isHype(Match match) {
+        String sport = match.getSport();
         String league = match.getLeague().toLowerCase();
         String round = match.getRound().toLowerCase();
         String home = match.getHomeTeam().toLowerCase();
         String away = match.getAwayTeam().toLowerCase();
 
-        if (ALWAYS_INCLUDE_LEAGUES.stream().anyMatch(league::contains)) return true;
+        if ("Soccer".equals(sport))     return isSoccerHype(league, round, home, away);
+        if ("Basketball".equals(sport)) return isBasketballHype(league, round);
+        if ("Baseball".equals(sport))   return isBaseballHype(league, round);
+        if ("Fighting".equals(sport))   return isFightingHype(league, round);
+        if ("LoL".equals(sport))        return isLolHype(league, round, home, away);
+        return false;
+    }
 
-        // LCK: T1 경기 전부 + 플레이오프
-        if (league.contains("lck")) {
-            boolean isT1Match = home.contains("t1") || away.contains("t1");
-            boolean isPlayoff = PLAYOFF_KEYWORDS.stream().anyMatch(kw -> round.contains(kw) || league.contains(kw));
-            return isT1Match || isPlayoff;
+    // 챔피언스리그 결승/준결승 + 월드컵(한국 전경기 + 32강부터 전경기)
+    private boolean isSoccerHype(String league, String round, String home, String away) {
+        if (league.contains("world cup")) {
+            boolean isKorea = home.contains("korea") || away.contains("korea");
+            if (isKorea) return true;
+            return WORLD_CUP_KNOCKOUT_KEYWORDS.stream().anyMatch(kw -> round.contains(kw));
         }
+        if (league.contains("champions league")) {
+            return FINAL_KEYWORDS.stream().anyMatch(kw -> round.contains(kw) || league.contains(kw));
+        }
+        return false;
+    }
 
-        if ("Fighting".equalsIgnoreCase(match.getSport()) &&
-            BOXING_TITLE_KEYWORDS.stream().anyMatch(kw -> league.contains(kw) || round.contains(kw))) return true;
+    // NBA 준결승/결승/파이널
+    private boolean isBasketballHype(String league, String round) {
+        if (!league.contains("nba")) return false;
+        return NBA_PLAYOFF_KEYWORDS.stream().anyMatch(kw -> round.contains(kw) || league.contains(kw));
+    }
 
-        boolean isBigSeasonLeague = BIG_SEASON_LEAGUES.stream().anyMatch(league::contains);
-        if (!isBigSeasonLeague) return false;
+    // 월드시리즈만
+    private boolean isBaseballHype(String league, String round) {
+        return league.contains("world series") || round.contains("world series");
+    }
 
-        return PLAYOFF_KEYWORDS.stream().anyMatch(kw -> round.contains(kw) || league.contains(kw));
+    // UFC 타이틀전 + 복싱 WBA/WBC/IBF/WBO 타이틀전
+    private boolean isFightingHype(String league, String round) {
+        if (league.contains("ufc")) {
+            return UFC_TITLE_KEYWORDS.stream().anyMatch(kw -> league.contains(kw) || round.contains(kw));
+        }
+        return BOXING_TITLE_KEYWORDS.stream().anyMatch(kw -> league.contains(kw) || round.contains(kw));
+    }
+
+    // MSI/롤드컵 전경기 + LCK(T1 전경기 + 플레이오프)
+    private boolean isLolHype(String league, String round, String home, String away) {
+        if (LOL_WORLDS_KEYWORDS.stream().anyMatch(league::contains)) return true;
+        if (league.contains("lck")) {
+            boolean isT1 = home.contains("t1") || away.contains("t1");
+            boolean isPlayoff = LOL_PLAYOFF_KEYWORDS.stream().anyMatch(round::contains);
+            return isT1 || isPlayoff;
+        }
+        return false;
     }
 }
