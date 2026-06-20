@@ -31,6 +31,15 @@ public class TelegramNotifier {
         if (channelId == null || channelId.isBlank()) throw new IllegalStateException("TELEGRAM_CHANNEL_ID is not set");
     }
 
+    public void sendError(String context, String errorMessage) {
+        try {
+            String text = context + (errorMessage != null && !errorMessage.isEmpty() ? "\n" + errorMessage : "");
+            sendRaw(text);
+        } catch (Exception e) {
+            System.err.println("[Telegram] 에러 알림 전송 실패: " + e.getMessage());
+        }
+    }
+
     public void send(List<Match> matches, LocalDate date) throws Exception {
         String message = buildDailyMessage(matches, date);
         sendRaw(message);
