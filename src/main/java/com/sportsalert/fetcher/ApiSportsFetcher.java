@@ -1,6 +1,7 @@
 package com.sportsalert.fetcher;
 
 import com.sportsalert.model.Match;
+import com.sportsalert.notifier.TelegramNotifier;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -20,8 +21,18 @@ public class ApiSportsFetcher {
     private static final String API_KEY = System.getenv("API_SPORTS_KEY");
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private final HttpClient client = HttpClient.newHttpClient();
+    private final TelegramNotifier notifier;
+    private boolean rateLimitAlertSent = false;
+
+    public ApiSportsFetcher(TelegramNotifier notifier) {
+        this.notifier = notifier;
+    }
 
     public List<Match> fetchMatches(LocalDate date) {
+        if (API_KEY == null || API_KEY.isBlank()) {
+            System.err.println("[API-Sports] API_SPORTS_KEY is not set — skipping");
+            return new ArrayList<>();
+        }
         List<Match> matches = new ArrayList<>();
         matches.addAll(fetchSoccer(date));
         matches.addAll(fetchBasketball(date));
@@ -48,6 +59,8 @@ public class ApiSportsFetcher {
                         league.optString("round", "")));
             }
             return matches;
+        } catch (RateLimitException e) {
+            return new ArrayList<>();
         } catch (Exception e) {
             System.err.println("[API-Sports] Soccer fetch failed: " + e.getMessage());
             return new ArrayList<>();
@@ -72,6 +85,8 @@ public class ApiSportsFetcher {
                         league.optString("round", "")));
             }
             return matches;
+        } catch (RateLimitException e) {
+            return new ArrayList<>();
         } catch (Exception e) {
             System.err.println("[API-Sports] Basketball fetch failed: " + e.getMessage());
             return new ArrayList<>();
@@ -96,6 +111,8 @@ public class ApiSportsFetcher {
                         league.optString("round", "")));
             }
             return matches;
+        } catch (RateLimitException e) {
+            return new ArrayList<>();
         } catch (Exception e) {
             System.err.println("[API-Sports] Baseball fetch failed: " + e.getMessage());
             return new ArrayList<>();
@@ -108,7 +125,24 @@ public class ApiSportsFetcher {
                 .header("x-apisports-key", API_KEY)
                 .build();
         HttpResponse<String> res = client.send(req, HttpResponse.BodyHandlers.ofString());
+
+        String remaining = res.headers().firstValue("x-ratelimit-requests-remaining").orElse("?");
+        String limit = res.headers().firstValue("x-ratelimit-requests-limit").orElse("?");
+        System.out.println("[API-Sports] 잔여 호출: " + remaining + "/" + limit + " — " + url);
+
         JSONObject json = new JSONObject(res.body());
+
+        // 한도 초과 감지
+        Object errorsObj = json.opt("errors");
+        if (errorsObj instanceof JSONObject && ((JSONObject) errorsObj).length() > 0) {
+            System.err.println("[API-Sports] 한도 초과 감지");
+            if (!rateLimitAlertSent && notifier != null) {
+                notifier.sendError("🚨 API한도 초과 - 축구/농구/야구 일정 누락", "");
+                rateLimitAlertSent = true;
+            }
+            throw new RateLimitException();
+        }
+
         JSONArray arr = json.optJSONArray("response");
         return arr != null ? arr : new JSONArray();
     }
@@ -122,4 +156,6 @@ public class ApiSportsFetcher {
             return "";
         }
     }
+
+    private static class RateLimitException extends Exception {}
 }
