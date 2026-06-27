@@ -120,6 +120,22 @@ public class ApiSportsFetcher {
     }
 
     private JSONArray request(String url) throws Exception {
+        int maxRetries = 3;
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                return doRequest(url);
+            } catch (RateLimitException e) {
+                throw e;
+            } catch (Exception e) {
+                if (attempt == maxRetries) throw e;
+                System.err.println("[API-Sports] 요청 실패 (시도 " + attempt + "/" + maxRetries + "): " + e.getMessage());
+                Thread.sleep(1000L * attempt);
+            }
+        }
+        throw new Exception("unreachable");
+    }
+
+    private JSONArray doRequest(String url) throws Exception {
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("x-apisports-key", API_KEY)
@@ -132,7 +148,6 @@ public class ApiSportsFetcher {
 
         JSONObject json = new JSONObject(res.body());
 
-        // 한도 초과 감지
         Object errorsObj = json.opt("errors");
         if (errorsObj instanceof JSONObject && ((JSONObject) errorsObj).length() > 0) {
             System.err.println("[API-Sports] 한도 초과 감지");

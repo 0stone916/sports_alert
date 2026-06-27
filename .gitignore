@@ -13,3 +13,5 @@ dependency-reduced-pom.xml
 # OS files
 .DS_Store
 Thumbs.db
+
+.vscode/launch.json
